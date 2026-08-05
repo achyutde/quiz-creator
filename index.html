@@ -162,6 +162,15 @@
   .cell.correct { background: var(--good-bg); border-color: var(--good); }
   .cell.wrong { background: var(--bad-bg); border-color: var(--bad); }
   .cell .flag { position: absolute; top: -6px; right: -4px; font-size: 12px; }
+  .jump-section { margin-bottom: 14px; }
+  .jump-section:last-child { margin-bottom: 0; }
+  .jump-sec-label { font-size: 12px; color: var(--gold); font-weight: 700; margin: 2px 0 8px; text-transform: uppercase; letter-spacing: .5px; }
+  select.filter {
+    appearance: none; border: 1px solid var(--border); background: var(--panel-2); color: var(--text);
+    padding: 9px 30px 9px 12px; border-radius: 10px; font-size: 14px; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239aa0c0' d='M2 4l4 4 4-4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+  }
 
   /* Bookmarks panel */
   .overlay {
@@ -232,10 +241,10 @@
 
       <details class="format">
         <summary>CSV format</summary>
-        <p style="color:var(--muted);line-height:1.55">Header row required. Column names are case-insensitive. <code>correct</code> can be a letter (A&ndash;F) or the exact answer text. Leave option columns blank for fewer choices. An optional <code>topic</code> column is supported.</p>
-        <pre class="sample">question,option_a,option_b,option_c,option_d,correct,explanation,topic
-"What is 2 + 2?","3","4","5","22","B","Simple addition.","Math"
-"Capital of Canada?","Toronto","Ottawa","Vancouver","Montreal","B","Ottawa is the capital.","Geography"</pre>
+        <p style="color:var(--muted);line-height:1.55">Header row required. Column names are case-insensitive. <code>correct</code> can be a letter (A&ndash;F) or the exact answer text. Leave option columns blank for fewer choices. Optional <code>topic</code> and <code>section</code> columns are supported &mdash; add a <code>section</code> column and the quiz groups questions into sections with a section filter.</p>
+        <pre class="sample">question,option_a,option_b,option_c,option_d,correct,explanation,topic,section
+"What is 2 + 2?","3","4","5","22","B","Simple addition.","Math","Warm-up"
+"Capital of Canada?","Toronto","Ottawa","Vancouver","Montreal","B","Ottawa is the capital.","Geography","Warm-up"</pre>
       </details>
     </div>
   </section>
@@ -247,6 +256,7 @@
         <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
         <div id="counter" class="counter"></div>
       </div>
+      <select id="sectionFilter" class="filter hidden" title="Filter by section"></select>
       <button id="reviewToggle" class="btn ghost hidden">Review bookmarked</button>
     </div>
 
@@ -273,7 +283,7 @@
 
     <div class="jump">
       <h3>Jump to question</h3>
-      <div id="jumpGrid" class="jump-grid"></div>
+      <div id="jumpArea"></div>
     </div>
   </section>
 </main>
@@ -317,9 +327,11 @@
     pos: 0,              // pointer into order
     answers: {},         // origIndex -> {picked: optionText, correct: bool}
     bookmarks: {},       // origIndex -> true
-    reviewMode: false    // when true, order = bookmarked only
+    reviewMode: false,   // when true, only bookmarked questions are shown
+    sections: [],        // unique section names in CSV order
+    hasSections: false,  // true if a section column was present
+    sectionFilter: null  // null = all sections, else a section name
   };
-  var fullOrder = [];    // remembers the full shuffled order when in review mode
 
   // ---------- Elements ----------
   var $ = function (id) { return document.getElementById(id); };
@@ -382,6 +394,7 @@
     var fcorrect = findCol(fields, ["correct", "answer", "correct_answer", "correctanswer", "key"]);
     var fexpl = findCol(fields, ["explanation", "explain", "rationale", "reason", "notes"]);
     var ftopic = findCol(fields, ["topic", "category", "subject", "tag"]);
+    var fsection = findCol(fields, ["section", "part", "group", "module", "unit"]);
 
     if (!fq) throw new Error("Could not find a 'question' column.\nFound columns: " + fields.join(", "));
     if (!fcorrect) throw new Error("Could not find a 'correct' (answer) column.\nFound columns: " + fields.join(", "));
@@ -440,6 +453,7 @@
         options: options,
         explanation: fexpl ? norm(row[fexpl]) : "",
         topic: ftopic ? norm(row[ftopic]) : "",
+        section: fsection ? norm(row[fsection]) : "",
         origIndex: questions.length
       });
     });
@@ -449,6 +463,14 @@
     quiz.questions = questions;
     quiz.name = sourceName || "Quiz";
     quiz.id = hashString(sourceName + "|" + questions.length + "|" + questions.map(function(q){return q.q;}).join("|"));
+
+    // Unique section names, in first-appearance order
+    quiz.sections = [];
+    questions.forEach(function (q) {
+      if (q.section && quiz.sections.indexOf(q.section) === -1) quiz.sections.push(q.section);
+    });
+    quiz.hasSections = quiz.sections.length > 0;
+    quiz.sectionFilter = null;
 
     loadState(); // restore prior answers/bookmarks for this exact quiz
 
@@ -486,9 +508,20 @@
   }
 
   // ---------- Rendering ----------
-  function activeOrder() { return quiz.order; }
+  function activeOrder() {
+    return quiz.order.filter(function (qi) {
+      var q = quiz.questions[qi];
+      if (quiz.reviewMode && !quiz.bookmarks[q.origIndex]) return false;
+      if (quiz.sectionFilter && q.section !== quiz.sectionFilter) return false;
+      return true;
+    });
+  }
 
-  function currentQ() { return quiz.questions[activeOrder()[quiz.pos]]; }
+  function currentQ() {
+    var ord = activeOrder();
+    if (quiz.pos >= ord.length) quiz.pos = Math.max(0, ord.length - 1);
+    return quiz.questions[ord[quiz.pos]];
+  }
 
   function startQuiz() {
     uploadScreen.classList.add("hidden");
@@ -497,8 +530,8 @@
     $("restartBtn").classList.remove("hidden");
     $("quizName").classList.remove("hidden");
     $("quizName").textContent = quiz.name;
+    buildSectionFilter();
     updateBmCount();
-    renderJump();
     render();
   }
 
@@ -510,12 +543,16 @@
     var answeredCount = Object.keys(quiz.answers).length;
     $("progressFill").style.width = (total ? ((quiz.pos + 1) / total * 100) : 0) + "%";
     $("counter").textContent = "Question " + (quiz.pos + 1) + " of " + total +
+      (q.section ? " · " + q.section : "") +
       (quiz.reviewMode ? " · bookmarked only" : "") +
       " · " + answeredCount + "/" + quiz.questions.length + " answered";
 
-    // topic + text
-    $("qtopic").textContent = q.topic || "";
-    $("qtopic").style.display = q.topic ? "block" : "none";
+    // section + topic label above the question
+    var labelParts = [];
+    if (q.section) labelParts.push(q.section);
+    if (q.topic) labelParts.push(q.topic);
+    $("qtopic").textContent = labelParts.join("  ·  ");
+    $("qtopic").style.display = labelParts.length ? "block" : "none";
     $("qtext").textContent = q.q;
 
     // star
@@ -582,25 +619,55 @@
     render();
   }
 
+  function makeCell(qi, idx) {
+    var q = quiz.questions[qi];
+    var cell = document.createElement("button");
+    cell.className = "cell";
+    cell.textContent = (idx + 1);
+    if (idx === quiz.pos) cell.classList.add("current");
+    var a = quiz.answers[q.origIndex];
+    if (a) cell.classList.add(a.correct ? "correct" : "wrong");
+    if (quiz.bookmarks[q.origIndex]) {
+      var f = document.createElement("span");
+      f.className = "flag"; f.textContent = "★";
+      cell.appendChild(f);
+    }
+    cell.addEventListener("click", function () { quiz.pos = idx; render(); });
+    return cell;
+  }
+
   function renderJump() {
-    var grid = $("jumpGrid");
-    grid.innerHTML = "";
+    var area = $("jumpArea");
+    area.innerHTML = "";
     var order = activeOrder();
+
+    // Group by section only when sections exist and we're showing more than one
+    var showGroups = quiz.hasSections && !quiz.sectionFilter;
+    if (!showGroups) {
+      var grid = document.createElement("div");
+      grid.className = "jump-grid";
+      order.forEach(function (qi, idx) { grid.appendChild(makeCell(qi, idx)); });
+      area.appendChild(grid);
+      return;
+    }
+
+    var groups = [], map = {};
     order.forEach(function (qi, idx) {
-      var q = quiz.questions[qi];
-      var cell = document.createElement("button");
-      cell.className = "cell";
-      cell.textContent = (idx + 1);
-      if (idx === quiz.pos) cell.classList.add("current");
-      var a = quiz.answers[q.origIndex];
-      if (a) cell.classList.add(a.correct ? "correct" : "wrong");
-      if (quiz.bookmarks[q.origIndex]) {
-        var f = document.createElement("span");
-        f.className = "flag"; f.textContent = "★";
-        cell.appendChild(f);
-      }
-      cell.addEventListener("click", function () { quiz.pos = idx; render(); });
-      grid.appendChild(cell);
+      var sec = quiz.questions[qi].section || "Unlabeled";
+      if (!map[sec]) { map[sec] = { name: sec, items: [] }; groups.push(map[sec]); }
+      map[sec].items.push({ qi: qi, idx: idx });
+    });
+    groups.forEach(function (g) {
+      var wrap = document.createElement("div");
+      wrap.className = "jump-section";
+      var label = document.createElement("div");
+      label.className = "jump-sec-label";
+      label.textContent = g.name;
+      var grid = document.createElement("div");
+      grid.className = "jump-grid";
+      g.items.forEach(function (it) { grid.appendChild(makeCell(it.qi, it.idx)); });
+      wrap.appendChild(label); wrap.appendChild(grid);
+      area.appendChild(wrap);
     });
   }
 
@@ -664,11 +731,7 @@
 
   // ---------- Review-only mode ----------
   function enterReview() {
-    var ids = Object.keys(quiz.bookmarks).map(Number);
-    if (!ids.length) return;
-    fullOrder = quiz.order.slice();
-    // preserve shuffled order but keep only bookmarked
-    quiz.order = quiz.order.filter(function (qi) { return quiz.bookmarks[quiz.questions[qi].origIndex]; });
+    if (!Object.keys(quiz.bookmarks).length) return;
     quiz.reviewMode = true;
     quiz.pos = 0;
     $("reviewToggle").textContent = "Exit review";
@@ -676,7 +739,6 @@
   }
   function exitReview() {
     if (!quiz.reviewMode) return;
-    quiz.order = fullOrder.length ? fullOrder : quiz.order;
     quiz.reviewMode = false;
     quiz.pos = 0;
     $("reviewToggle").textContent = "Review bookmarked";
@@ -684,17 +746,43 @@
   }
   function toggleReview() { quiz.reviewMode ? exitReview() : enterReview(); }
 
+  // ---------- Section filter ----------
+  function buildSectionFilter() {
+    var sel = $("sectionFilter");
+    if (!quiz.hasSections) { sel.classList.add("hidden"); return; }
+    sel.classList.remove("hidden");
+    sel.innerHTML = "";
+    var all = document.createElement("option");
+    all.value = ""; all.textContent = "All sections";
+    sel.appendChild(all);
+    quiz.sections.forEach(function (s) {
+      var o = document.createElement("option");
+      o.value = s; o.textContent = s;
+      sel.appendChild(o);
+    });
+    sel.value = quiz.sectionFilter || "";
+  }
+  function applySectionFilter() {
+    var v = $("sectionFilter").value;
+    quiz.sectionFilter = v || null;
+    quiz.pos = 0;
+    render();
+  }
+
   // ---------- Finish / score ----------
   function finish() {
-    var total = quiz.questions.length;
+    var order = activeOrder();
+    var total = order.length;
     var correct = 0, answered = 0;
-    quiz.questions.forEach(function (q) {
-      var a = quiz.answers[q.origIndex];
+    order.forEach(function (qi) {
+      var a = quiz.answers[quiz.questions[qi].origIndex];
       if (a) { answered++; if (a.correct) correct++; }
     });
     var pct = total ? Math.round(correct / total * 100) : 0;
     $("scoreBig").textContent = correct + " / " + total;
-    $("scorePct").textContent = pct + "% correct";
+    $("scorePct").textContent = pct + "% correct" +
+      (quiz.sectionFilter ? " · " + quiz.sectionFilter : "") +
+      (quiz.reviewMode ? " · bookmarked" : "");
     $("scoreSub").textContent = answered < total
       ? (total - answered) + " question" + (total - answered === 1 ? "" : "s") + " left unanswered."
       : "All questions answered.";
@@ -708,7 +796,7 @@
     saveState();
     quiz.order = quiz.questions.map(function (_, i) { return i; });
     quiz.questions.forEach(function (q) { shuffle(q.options); });
-    quiz.reviewMode = false; fullOrder = [];
+    quiz.reviewMode = false;
     quiz.pos = 0;
     $("reviewToggle").textContent = "Review bookmarked";
     closeResult();
@@ -724,15 +812,15 @@
   }
 
   // ---------- Sample ----------
-  var SAMPLE = 'question,option_a,option_b,option_c,option_d,correct,explanation,topic\n' +
-    '"What is 2 + 2?","3","4","5","22","B","2 plus 2 equals 4.","Math"\n' +
-    '"What is the capital of Canada?","Toronto","Ottawa","Vancouver","Montreal","B","Ottawa, in Ontario, is Canada\'s capital.","Geography"\n' +
-    '"Which planet is known as the Red Planet?","Venus","Jupiter","Mars","Saturn","C","Mars looks red due to iron oxide on its surface.","Science"\n' +
-    '"Who wrote Romeo and Juliet?","Charles Dickens","William Shakespeare","Jane Austen","Mark Twain","B","Shakespeare wrote it in the 1590s.","Literature"\n' +
-    '"What is the largest ocean on Earth?","Atlantic","Indian","Arctic","Pacific","D","The Pacific is the largest and deepest ocean.","Geography"\n' +
-    '"HTTP status 404 means what?","OK","Server error","Not found","Redirect","C","404 indicates the requested resource was not found.","Tech"\n' +
-    '"What gas do plants primarily absorb?","Oxygen","Nitrogen","Carbon dioxide","Hydrogen","C","Plants absorb CO2 for photosynthesis.","Science"\n' +
-    '"True or false: the sun is a star.","True","False","","","A","The sun is a G-type main-sequence star.","Science"';
+  var SAMPLE = 'question,option_a,option_b,option_c,option_d,correct,explanation,topic,section\n' +
+    '"What is 2 + 2?","3","4","5","22","B","2 plus 2 equals 4.","Math","Warm-up"\n' +
+    '"What is the capital of Canada?","Toronto","Ottawa","Vancouver","Montreal","B","Ottawa, in Ontario, is Canada\'s capital.","Geography","Warm-up"\n' +
+    '"Which planet is known as the Red Planet?","Venus","Jupiter","Mars","Saturn","C","Mars looks red due to iron oxide on its surface.","Science","Warm-up"\n' +
+    '"Who wrote Romeo and Juliet?","Charles Dickens","William Shakespeare","Jane Austen","Mark Twain","B","Shakespeare wrote it in the 1590s.","Literature","Core"\n' +
+    '"What is the largest ocean on Earth?","Atlantic","Indian","Arctic","Pacific","D","The Pacific is the largest and deepest ocean.","Geography","Core"\n' +
+    '"HTTP status 404 means what?","OK","Server error","Not found","Redirect","C","404 indicates the requested resource was not found.","Tech","Core"\n' +
+    '"What gas do plants primarily absorb?","Oxygen","Nitrogen","Carbon dioxide","Hydrogen","C","Plants absorb CO2 for photosynthesis.","Science","Challenge"\n' +
+    '"True or false: the sun is a star.","True","False","","","A","The sun is a G-type main-sequence star.","Science","Challenge"';
 
   // ---------- Events ----------
   dropzone.addEventListener("click", function () { fileInput.click(); });
@@ -758,6 +846,7 @@
   $("finishBtn").addEventListener("click", finish);
   $("starBtn").addEventListener("click", toggleBookmark);
   $("reviewToggle").addEventListener("click", toggleReview);
+  $("sectionFilter").addEventListener("change", applySectionFilter);
   $("bookmarksBtn").addEventListener("click", openBmPanel);
   $("bmClose").addEventListener("click", closeBmPanel);
   $("overlay").addEventListener("click", closeBmPanel);

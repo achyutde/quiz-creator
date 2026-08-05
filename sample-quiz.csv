@@ -1,9 +1,9 @@
-question,option_a,option_b,option_c,option_d,correct,explanation,topic
-"What is 2 + 2?","3","4","5","22","B","2 plus 2 equals 4.","Math"
-"What is the capital of Canada?","Toronto","Ottawa","Vancouver","Montreal","B","Ottawa, in Ontario, is Canada's capital.","Geography"
-"Which planet is known as the Red Planet?","Venus","Jupiter","Mars","Saturn","C","Mars looks red due to iron oxide on its surface.","Science"
-"Who wrote Romeo and Juliet?","Charles Dickens","William Shakespeare","Jane Austen","Mark Twain","B","Shakespeare wrote it in the 1590s.","Literature"
-"What is the largest ocean on Earth?","Atlantic","Indian","Arctic","Pacific","D","The Pacific is the largest and deepest ocean.","Geography"
-"HTTP status 404 means what?","OK","Server error","Not found","Redirect","C","404 indicates the requested resource was not found.","Tech"
-"What gas do plants primarily absorb?","Oxygen","Nitrogen","Carbon dioxide","Hydrogen","C","Plants absorb CO2 for photosynthesis.","Science"
-"True or false: the sun is a star.","True","False","","","A","The sun is a G-type main-sequence star.","Science"
+question,option_a,option_b,option_c,option_d,option_e,correct,explanation,topic,section
+What is 2 + 2?,3,4,5,22,44,B,2 plus 2 equals 4.,Math,Warm-up
+What is the capital of Canada?,Toronto,Ottawa,Vancouver,Montreal,Tokyo,B,"Ottawa, in Ontario, is Canada's capital.",Geography,Warm-up
+Which planet is known as the Red Planet?,Venus,Jupiter,Mars,Saturn,Sun,C,Mars looks red due to iron oxide on its surface.,Science,Warm-up
+Who wrote Romeo and Juliet?,Charles Dickens,William Shakespeare,Jane Austen,Mark Twain,Its a folklore,B,Shakespeare wrote it in the 1590s.,Literature,Core
+What is the largest ocean on Earth?,Atlantic,Indian,Arctic,Pacific,Antartic,D,The Pacific is the largest and deepest ocean.,Geography,Core
+HTTP status 404 means what?,OK,Server error,Not found,Redirect,None of the above,C,404 indicates the requested resource was not found.,Tech,Core
+What gas do plants primarily absorb?,Oxygen,Nitrogen,Carbon dioxide,Hydrogen,Helum,C,Plants absorb CO2 for photosynthesis.,Science,Challenge
+True or false: the sun is a star.,True,False,,,,A,The sun is a G-type main-sequence star.,Science,Challenge

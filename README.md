@@ -17,18 +17,20 @@ A header row is required. Column names are case-insensitive.
 | `correct` | Yes | Letter (`A`–`F`) **or** the exact answer text. Aliases: `answer`, `key`. |
 | `explanation` | No | Shown after you answer. Aliases: `explain`, `rationale`, `notes`. |
 | `topic` | No | Optional label shown above the question. Aliases: `category`, `subject`, `tag`. |
+| `section` | No | Optional. When present, questions are grouped into sections with a section filter. Aliases: `part`, `group`, `module`, `unit`. |
 
 Example:
 
 ```csv
-question,option_a,option_b,option_c,option_d,correct,explanation,topic
-"What is 2 + 2?","3","4","5","22","B","Simple addition.","Math"
-"Capital of Canada?","Toronto","Ottawa","Vancouver","Montreal","B","Ottawa is the capital.","Geography"
+question,option_a,option_b,option_c,option_d,correct,explanation,topic,section
+"What is 2 + 2?","3","4","5","22","B","Simple addition.","Math","Warm-up"
+"Capital of Canada?","Toronto","Ottawa","Vancouver","Montreal","B","Ottawa is the capital.","Geography","Warm-up"
 ```
 
 ## Features
 
 - Questions stay in CSV order; answer options are shuffled each run.
+- Optional sections: add a `section` column to group questions, with a filter to practice one section or all.
 - Immediate feedback with the explanation after every answer.
 - Prev / Next plus a jump grid that shows answered (green/red) and bookmarked (★) questions.
 - Bookmark any question (★ button or press `b`); a dedicated bookmarks panel plus a "Review bookmarked" mode.
