@@ -452,8 +452,8 @@
 
     loadState(); // restore prior answers/bookmarks for this exact quiz
 
-    // Shuffle question order and each question's options
-    quiz.order = shuffle(questions.map(function (_, i) { return i; }));
+    // Keep questions in CSV order; shuffle each question's options
+    quiz.order = questions.map(function (_, i) { return i; });
     quiz.questions.forEach(function (q) { shuffle(q.options); });
     quiz.pos = 0;
     quiz.reviewMode = false;
@@ -703,10 +703,10 @@
   function closeResult() { $("resultBack").classList.remove("show"); }
 
   function restart() {
-    // reshuffle, wipe answers (keep bookmarks)
+    // reset answers (keep bookmarks); questions stay in CSV order, options reshuffle
     quiz.answers = {};
     saveState();
-    quiz.order = shuffle(quiz.questions.map(function (_, i) { return i; }));
+    quiz.order = quiz.questions.map(function (_, i) { return i; });
     quiz.questions.forEach(function (q) { shuffle(q.options); });
     quiz.reviewMode = false; fullOrder = [];
     quiz.pos = 0;

@@ -28,7 +28,7 @@ question,option_a,option_b,option_c,option_d,correct,explanation,topic
 
 ## Features
 
-- Shuffles both question order and answer options each run.
+- Questions stay in CSV order; answer options are shuffled each run.
 - Immediate feedback with the explanation after every answer.
 - Prev / Next plus a jump grid that shows answered (green/red) and bookmarked (★) questions.
 - Bookmark any question (★ button or press `b`); a dedicated bookmarks panel plus a "Review bookmarked" mode.
