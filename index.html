@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Creator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1220;
+    --panel: #1a1e33;
+    --panel-2: #232845;
+    --text: #e8eaf3;
+    --muted: #9aa0c0;
+    --accent: #6c8cff;
+    --accent-2: #4a6bff;
+    --good: #2fbf71;
+    --good-bg: rgba(47,191,113,0.14);
+    --bad: #ff5c7a;
+    --bad-bg: rgba(255,92,122,0.14);
+    --gold: #ffca4a;
+    --border: #2c3157;
+    --radius: 14px;
+    --shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: radial-gradient(1200px 800px at 20% -10%, #1b2140 0%, var(--bg) 55%);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px;
+    background: rgba(20,24,44,0.85);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 20;
+  }
+  header h1 { font-size: 18px; margin: 0; font-weight: 700; letter-spacing: 0.2px; }
+  header .logo {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), #a06bff);
+    display: grid; place-items: center; font-weight: 800; color: #fff; font-size: 15px;
+  }
+  header .spacer { flex: 1; }
+  .btn {
+    appearance: none; border: 1px solid var(--border);
+    background: var(--panel-2); color: var(--text);
+    padding: 9px 14px; border-radius: 10px; font-size: 14px; cursor: pointer;
+    transition: transform .05s ease, background .15s ease, border-color .15s ease;
+  }
+  .btn:hover { background: #2b3157; }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.07); }
+  .btn.ghost { background: transparent; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.icon { padding: 9px 11px; }
+
+  main { max-width: 820px; margin: 0 auto; padding: 22px 18px 90px; }
+
+  /* Upload screen */
+  .upload-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 26px; box-shadow: var(--shadow);
+  }
+  .upload-card h2 { margin: 0 0 6px; font-size: 22px; }
+  .upload-card p.lead { color: var(--muted); margin: 0 0 20px; line-height: 1.5; }
+  .dropzone {
+    border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 34px 20px; text-align: center; cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+    background: rgba(255,255,255,0.015);
+  }
+  .dropzone.drag { border-color: var(--accent); background: rgba(108,140,255,0.08); }
+  .dropzone .big { font-size: 15px; margin-bottom: 6px; }
+  .dropzone .sub { color: var(--muted); font-size: 13px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 18px; }
+  details.format { margin-top: 20px; border: 1px solid var(--border); border-radius: 10px; padding: 4px 14px; background: rgba(255,255,255,0.02); }
+  details.format summary { cursor: pointer; padding: 10px 0; font-weight: 600; }
+  details.format code, details.format pre { color: #cdd3ff; }
+  pre.sample {
+    background: #0c0f1c; border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px; overflow-x: auto; font-size: 12.5px; line-height: 1.5;
+  }
+  .err { color: var(--bad); margin-top: 12px; font-size: 14px; white-space: pre-wrap; }
+
+  /* Quiz screen */
+  .topbar {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .progress-wrap { flex: 1; min-width: 180px; }
+  .progress-track { height: 8px; background: var(--panel-2); border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #a06bff); width: 0%; transition: width .25s ease; }
+  .counter { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+  .qcard {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow);
+  }
+  .qhead { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 6px; }
+  .qtopic { font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: .6px; font-weight: 700; }
+  .qtext { font-size: 19px; line-height: 1.45; margin: 4px 0 18px; }
+  .star {
+    margin-left: auto; font-size: 22px; cursor: pointer; user-select: none; line-height: 1;
+    color: var(--muted); background: none; border: none; padding: 2px 4px;
+  }
+  .star.on { color: var(--gold); }
+
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option {
+    text-align: left; width: 100%; padding: 14px 16px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--panel-2); color: var(--text);
+    font-size: 15px; cursor: pointer; display: flex; gap: 12px; align-items: center;
+    transition: background .12s ease, border-color .12s ease, transform .05s ease;
+  }
+  .option:hover:not(:disabled) { background: #2b3157; }
+  .option:active:not(:disabled) { transform: translateY(1px); }
+  .option .key {
+    width: 26px; height: 26px; flex: none; border-radius: 7px; display: grid; place-items: center;
+    background: #323863; font-size: 13px; font-weight: 700;
+  }
+  .option:disabled { cursor: default; }
+  .option.correct { border-color: var(--good); background: var(--good-bg); }
+  .option.correct .key { background: var(--good); color: #08210f; }
+  .option.wrong { border-color: var(--bad); background: var(--bad-bg); }
+  .option.wrong .key { background: var(--bad); color: #2a0510; }
+  .option .mark { margin-left: auto; font-weight: 700; }
+
+  .explanation {
+    margin-top: 16px; padding: 14px 16px; border-radius: 12px;
+    border: 1px solid var(--border); background: rgba(108,140,255,0.08);
+    font-size: 14.5px; line-height: 1.55; display: none;
+  }
+  .explanation.show { display: block; }
+  .explanation .lbl { font-weight: 700; color: var(--accent); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .verdict { font-weight: 700; }
+  .verdict.good { color: var(--good); }
+  .verdict.bad { color: var(--bad); }
+
+  .nav { display: flex; gap: 10px; margin-top: 18px; align-items: center; }
+  .nav .spacer { flex: 1; }
+
+  /* Jump grid */
+  .jump {
+    margin-top: 20px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px;
+  }
+  .jump h3 { margin: 0 0 10px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+  .jump-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 8px; }
+  .cell {
+    aspect-ratio: 1/1; border-radius: 9px; border: 1px solid var(--border);
+    background: var(--panel-2); color: var(--text); font-size: 13px; cursor: pointer;
+    display: grid; place-items: center; position: relative;
+  }
+  .cell:hover { background: #2b3157; }
+  .cell.current { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .cell.correct { background: var(--good-bg); border-color: var(--good); }
+  .cell.wrong { background: var(--bad-bg); border-color: var(--bad); }
+  .cell .flag { position: absolute; top: -6px; right: -4px; font-size: 12px; }
+
+  /* Bookmarks panel */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 40; display: none;
+  }
+  .overlay.show { display: block; }
+  .panel-side {
+    position: fixed; top: 0; right: 0; height: 100%; width: min(380px, 90vw);
+    background: var(--panel); border-left: 1px solid var(--border); z-index: 50;
+    transform: translateX(100%); transition: transform .22s ease;
+    display: flex; flex-direction: column;
+  }
+  .panel-side.show { transform: translateX(0); }
+  .panel-side header { position: static; background: transparent; border-bottom: 1px solid var(--border); }
+  .panel-body { overflow-y: auto; padding: 12px 14px; flex: 1; }
+  .bm-item {
+    padding: 12px 14px; border: 1px solid var(--border); border-radius: 11px;
+    margin-bottom: 10px; cursor: pointer; background: var(--panel-2);
+  }
+  .bm-item:hover { background: #2b3157; }
+  .bm-item .qn { font-size: 12px; color: var(--gold); font-weight: 700; margin-bottom: 4px; }
+  .bm-item .qp { font-size: 14px; line-height: 1.4; color: var(--text); }
+  .empty { color: var(--muted); text-align: center; padding: 30px 10px; font-size: 14px; }
+
+  /* Results modal */
+  .modal-back {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 60;
+    display: none; place-items: center; padding: 20px;
+  }
+  .modal-back.show { display: grid; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 28px; max-width: 420px; width: 100%; text-align: center; box-shadow: var(--shadow);
+  }
+  .score-ring { font-size: 46px; font-weight: 800; margin: 6px 0; }
+  .score-sub { color: var(--muted); margin-bottom: 20px; }
+  .score-pct { font-size: 15px; margin-bottom: 6px; }
+  .hidden { display: none !important; }
+  .pill { font-size: 12px; color: var(--muted); border: 1px solid var(--border); border-radius: 99px; padding: 4px 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Q</div>
+  <h1>Quiz Creator</h1>
+  <span class="spacer"></span>
+  <span id="quizName" class="pill hidden"></span>
+  <button id="bookmarksBtn" class="btn icon hidden" title="Bookmarks">&#9733; <span id="bmCount">0</span></button>
+  <button id="restartBtn" class="btn ghost hidden" title="New CSV">New CSV</button>
+</header>
+
+<main>
+  <!-- UPLOAD SCREEN -->
+  <section id="uploadScreen">
+    <div class="upload-card">
+      <h2>Simulate a quiz from a CSV</h2>
+      <p class="lead">Upload a CSV of questions and start practicing instantly. Answers are checked immediately with explanations, and you can bookmark tricky questions.</p>
+      <div id="dropzone" class="dropzone">
+        <div class="big">Drop your CSV here, or click to choose a file</div>
+        <div class="sub">.csv &middot; up to 6 options per question</div>
+        <input id="fileInput" type="file" accept=".csv,text/csv" hidden>
+      </div>
+      <div class="row">
+        <button id="sampleBtn" class="btn">Try the sample quiz</button>
+        <span class="pill">Nothing is uploaded to a server &mdash; everything runs in your browser.</span>
+      </div>
+      <div id="uploadErr" class="err"></div>
+
+      <details class="format">
+        <summary>CSV format</summary>
+        <p style="color:var(--muted);line-height:1.55">Header row required. Column names are case-insensitive. <code>correct</code> can be a letter (A&ndash;F) or the exact answer text. Leave option columns blank for fewer choices. An optional <code>topic</code> column is supported.</p>
+        <pre class="sample">question,option_a,option_b,option_c,option_d,correct,explanation,topic
+"What is 2 + 2?","3","4","5","22","B","Simple addition.","Math"
+"Capital of Canada?","Toronto","Ottawa","Vancouver","Montreal","B","Ottawa is the capital.","Geography"</pre>
+      </details>
+    </div>
+  </section>
+
+  <!-- QUIZ SCREEN -->
+  <section id="quizScreen" class="hidden">
+    <div class="topbar">
+      <div class="progress-wrap">
+        <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+        <div id="counter" class="counter"></div>
+      </div>
+      <button id="reviewToggle" class="btn ghost hidden">Review bookmarked</button>
+    </div>
+
+    <div class="qcard">
+      <div class="qhead">
+        <div>
+          <div id="qtopic" class="qtopic"></div>
+        </div>
+        <button id="starBtn" class="star" title="Bookmark this question">&#9734;</button>
+      </div>
+      <div id="qtext" class="qtext"></div>
+      <div id="options" class="options"></div>
+      <div id="explanation" class="explanation">
+        <div class="lbl"><span id="verdict" class="verdict"></span></div>
+        <div id="explText"></div>
+      </div>
+      <div class="nav">
+        <button id="prevBtn" class="btn">&larr; Prev</button>
+        <span class="spacer"></span>
+        <button id="nextBtn" class="btn primary">Next &rarr;</button>
+        <button id="finishBtn" class="btn primary hidden">Finish</button>
+      </div>
+    </div>
+
+    <div class="jump">
+      <h3>Jump to question</h3>
+      <div id="jumpGrid" class="jump-grid"></div>
+    </div>
+  </section>
+</main>
+
+<!-- Bookmarks panel -->
+<div id="overlay" class="overlay"></div>
+<aside id="bmPanel" class="panel-side">
+  <header>
+    <h1 style="font-size:16px">Bookmarks</h1>
+    <span class="spacer"></span>
+    <button id="bmClose" class="btn ghost">Close</button>
+  </header>
+  <div id="bmBody" class="panel-body"></div>
+</aside>
+
+<!-- Results modal -->
+<div id="resultBack" class="modal-back">
+  <div class="modal">
+    <div style="color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-size:12px;font-weight:700">Quiz complete</div>
+    <div id="scoreBig" class="score-ring"></div>
+    <div id="scorePct" class="score-pct"></div>
+    <div id="scoreSub" class="score-sub"></div>
+    <div class="row" style="justify-content:center">
+      <button id="retryBtn" class="btn primary">Restart &amp; reshuffle</button>
+      <button id="reviewBmBtn" class="btn">Review bookmarks</button>
+      <button id="newCsvBtn" class="btn ghost">New CSV</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- State ----------
+  var quiz = {
+    id: null,            // hash of content for storage namespacing
+    name: "",
+    questions: [],       // [{q, options:[{text,correct}], explanation, topic, origIndex}]
+    order: [],           // shuffled question indices into questions[]
+    pos: 0,              // pointer into order
+    answers: {},         // origIndex -> {picked: optionText, correct: bool}
+    bookmarks: {},       // origIndex -> true
+    reviewMode: false    // when true, order = bookmarked only
+  };
+  var fullOrder = [];    // remembers the full shuffled order when in review mode
+
+  // ---------- Elements ----------
+  var $ = function (id) { return document.getElementById(id); };
+  var uploadScreen = $("uploadScreen"), quizScreen = $("quizScreen");
+  var fileInput = $("fileInput"), dropzone = $("dropzone");
+
+  // ---------- Utilities ----------
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+  function hashString(s) {
+    var h = 5381, i = s.length;
+    while (i) { h = (h * 33) ^ s.charCodeAt(--i); }
+    return (h >>> 0).toString(36);
+  }
+  function norm(s) { return (s == null ? "" : String(s)).trim(); }
+  function letterToIndex(l) {
+    l = norm(l).toUpperCase();
+    if (/^[A-F]$/.test(l)) return l.charCodeAt(0) - 65;
+    return -1;
+  }
+  function storageKey() { return "quizcreator:" + quiz.id; }
+
+  function saveState() {
+    if (!quiz.id) return;
+    try {
+      localStorage.setItem(storageKey(), JSON.stringify({
+        name: quiz.name,
+        answers: quiz.answers,
+        bookmarks: quiz.bookmarks
+      }));
+    } catch (e) { /* storage may be full/blocked */ }
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(storageKey());
+      if (!raw) return;
+      var s = JSON.parse(raw);
+      quiz.answers = s.answers || {};
+      quiz.bookmarks = s.bookmarks || {};
+    } catch (e) {}
+  }
+
+  // ---------- CSV parsing ----------
+  function findCol(fields, names) {
+    var lower = fields.map(function (f) { return norm(f).toLowerCase(); });
+    for (var n = 0; n < names.length; n++) {
+      var idx = lower.indexOf(names[n]);
+      if (idx !== -1) return fields[idx];
+    }
+    return null;
+  }
+
+  function buildQuiz(rows, fields, sourceName) {
+    var fq = findCol(fields, ["question", "q", "prompt"]);
+    var fcorrect = findCol(fields, ["correct", "answer", "correct_answer", "correctanswer", "key"]);
+    var fexpl = findCol(fields, ["explanation", "explain", "rationale", "reason", "notes"]);
+    var ftopic = findCol(fields, ["topic", "category", "subject", "tag"]);
+
+    if (!fq) throw new Error("Could not find a 'question' column.\nFound columns: " + fields.join(", "));
+    if (!fcorrect) throw new Error("Could not find a 'correct' (answer) column.\nFound columns: " + fields.join(", "));
+
+    // Option columns: option_a..option_f, or a/b/c/d, or option1..option6
+    var optFields = [];
+    var patterns = [
+      ["option_a","option_b","option_c","option_d","option_e","option_f"],
+      ["a","b","c","d","e","f"],
+      ["option1","option2","option3","option4","option5","option6"],
+      ["opt_a","opt_b","opt_c","opt_d","opt_e","opt_f"],
+      ["answer_a","answer_b","answer_c","answer_d","answer_e","answer_f"]
+    ];
+    var lowerFields = fields.map(function (f) { return norm(f).toLowerCase(); });
+    for (var p = 0; p < patterns.length; p++) {
+      var found = [];
+      for (var k = 0; k < patterns[p].length; k++) {
+        var idx = lowerFields.indexOf(patterns[p][k]);
+        if (idx !== -1) found.push(fields[idx]);
+      }
+      if (found.length >= 2) { optFields = found; break; }
+    }
+    if (!optFields.length) {
+      throw new Error("Could not find option columns (e.g. option_a, option_b, ...).\nFound columns: " + fields.join(", "));
+    }
+
+    var questions = [];
+    rows.forEach(function (row) {
+      var qtext = norm(row[fq]);
+      if (!qtext) return; // skip blank rows
+      var options = [];
+      optFields.forEach(function (of) {
+        var t = norm(row[of]);
+        if (t) options.push({ text: t });
+      });
+      if (options.length < 2) return; // need at least 2 options
+
+      // Determine correct option
+      var raw = norm(row[fcorrect]);
+      var correctIdx = -1;
+      var li = letterToIndex(raw);
+      if (li >= 0 && li < options.length) {
+        correctIdx = li;
+      } else {
+        // match by text (case-insensitive)
+        for (var i = 0; i < options.length; i++) {
+          if (options[i].text.toLowerCase() === raw.toLowerCase()) { correctIdx = i; break; }
+        }
+      }
+      if (correctIdx < 0) return; // can't resolve correct answer -> skip
+
+      options.forEach(function (o, i) { o.correct = (i === correctIdx); });
+
+      questions.push({
+        q: qtext,
+        options: options,
+        explanation: fexpl ? norm(row[fexpl]) : "",
+        topic: ftopic ? norm(row[ftopic]) : "",
+        origIndex: questions.length
+      });
+    });
+
+    if (!questions.length) throw new Error("No valid questions found. Check that each row has a question, at least 2 options, and a resolvable 'correct' value.");
+
+    quiz.questions = questions;
+    quiz.name = sourceName || "Quiz";
+    quiz.id = hashString(sourceName + "|" + questions.length + "|" + questions.map(function(q){return q.q;}).join("|"));
+
+    loadState(); // restore prior answers/bookmarks for this exact quiz
+
+    // Shuffle question order and each question's options
+    quiz.order = shuffle(questions.map(function (_, i) { return i; }));
+    quiz.questions.forEach(function (q) { shuffle(q.options); });
+    quiz.pos = 0;
+    quiz.reviewMode = false;
+  }
+
+  // ---------- CSV loading ----------
+  function parseCSVText(text, name) {
+    var res = Papa.parse(text, { header: true, skipEmptyLines: "greedy", dynamicTyping: false });
+    if (!res.data || !res.data.length) throw new Error("The CSV appears to be empty.");
+    var fields = res.meta.fields || Object.keys(res.data[0]);
+    buildQuiz(res.data, fields, name);
+  }
+
+  function handleFile(file) {
+    $("uploadErr").textContent = "";
+    Papa.parse(file, {
+      header: true, skipEmptyLines: "greedy", dynamicTyping: false,
+      complete: function (res) {
+        try {
+          if (!res.data || !res.data.length) throw new Error("The CSV appears to be empty.");
+          var fields = res.meta.fields || Object.keys(res.data[0]);
+          buildQuiz(res.data, fields, file.name.replace(/\.csv$/i, ""));
+          startQuiz();
+        } catch (e) {
+          $("uploadErr").textContent = e.message;
+        }
+      },
+      error: function (err) { $("uploadErr").textContent = "Could not read file: " + err; }
+    });
+  }
+
+  // ---------- Rendering ----------
+  function activeOrder() { return quiz.order; }
+
+  function currentQ() { return quiz.questions[activeOrder()[quiz.pos]]; }
+
+  function startQuiz() {
+    uploadScreen.classList.add("hidden");
+    quizScreen.classList.remove("hidden");
+    $("bookmarksBtn").classList.remove("hidden");
+    $("restartBtn").classList.remove("hidden");
+    $("quizName").classList.remove("hidden");
+    $("quizName").textContent = quiz.name;
+    updateBmCount();
+    renderJump();
+    render();
+  }
+
+  function render() {
+    var q = currentQ();
+    var total = activeOrder().length;
+
+    // progress
+    var answeredCount = Object.keys(quiz.answers).length;
+    $("progressFill").style.width = (total ? ((quiz.pos + 1) / total * 100) : 0) + "%";
+    $("counter").textContent = "Question " + (quiz.pos + 1) + " of " + total +
+      (quiz.reviewMode ? " · bookmarked only" : "") +
+      " · " + answeredCount + "/" + quiz.questions.length + " answered";
+
+    // topic + text
+    $("qtopic").textContent = q.topic || "";
+    $("qtopic").style.display = q.topic ? "block" : "none";
+    $("qtext").textContent = q.q;
+
+    // star
+    var star = $("starBtn");
+    if (quiz.bookmarks[q.origIndex]) { star.classList.add("on"); star.innerHTML = "&#9733;"; }
+    else { star.classList.remove("on"); star.innerHTML = "&#9734;"; }
+
+    // options
+    var prior = quiz.answers[q.origIndex];
+    var optWrap = $("options");
+    optWrap.innerHTML = "";
+    q.options.forEach(function (opt, i) {
+      var b = document.createElement("button");
+      b.className = "option";
+      var key = document.createElement("span");
+      key.className = "key";
+      key.textContent = String.fromCharCode(65 + i);
+      var txt = document.createElement("span");
+      txt.textContent = opt.text;
+      b.appendChild(key); b.appendChild(txt);
+
+      if (prior) {
+        b.disabled = true;
+        if (opt.correct) { b.classList.add("correct"); addMark(b, "✓"); }
+        if (opt.text === prior.picked && !opt.correct) { b.classList.add("wrong"); addMark(b, "✗"); }
+      } else {
+        b.addEventListener("click", function () { answer(q, opt); });
+      }
+      optWrap.appendChild(b);
+    });
+
+    // explanation
+    var exp = $("explanation");
+    if (prior) {
+      exp.classList.add("show");
+      var v = $("verdict");
+      if (prior.correct) { v.textContent = "Correct"; v.className = "verdict good"; }
+      else { v.textContent = "Not quite"; v.className = "verdict bad"; }
+      $("explText").textContent = q.explanation || "No explanation provided.";
+    } else {
+      exp.classList.remove("show");
+    }
+
+    // nav buttons
+    $("prevBtn").disabled = (quiz.pos === 0);
+    var last = (quiz.pos === total - 1);
+    $("nextBtn").classList.toggle("hidden", last);
+    $("finishBtn").classList.toggle("hidden", !last);
+
+    renderJump();
+  }
+
+  function addMark(btn, ch) {
+    var m = document.createElement("span");
+    m.className = "mark";
+    m.textContent = ch;
+    btn.appendChild(m);
+  }
+
+  function answer(q, opt) {
+    if (quiz.answers[q.origIndex]) return;
+    quiz.answers[q.origIndex] = { picked: opt.text, correct: !!opt.correct };
+    saveState();
+    render();
+  }
+
+  function renderJump() {
+    var grid = $("jumpGrid");
+    grid.innerHTML = "";
+    var order = activeOrder();
+    order.forEach(function (qi, idx) {
+      var q = quiz.questions[qi];
+      var cell = document.createElement("button");
+      cell.className = "cell";
+      cell.textContent = (idx + 1);
+      if (idx === quiz.pos) cell.classList.add("current");
+      var a = quiz.answers[q.origIndex];
+      if (a) cell.classList.add(a.correct ? "correct" : "wrong");
+      if (quiz.bookmarks[q.origIndex]) {
+        var f = document.createElement("span");
+        f.className = "flag"; f.textContent = "★";
+        cell.appendChild(f);
+      }
+      cell.addEventListener("click", function () { quiz.pos = idx; render(); });
+      grid.appendChild(cell);
+    });
+  }
+
+  // ---------- Navigation ----------
+  function next() { if (quiz.pos < activeOrder().length - 1) { quiz.pos++; render(); } }
+  function prev() { if (quiz.pos > 0) { quiz.pos--; render(); } }
+
+  // ---------- Bookmarks ----------
+  function toggleBookmark() {
+    var q = currentQ();
+    if (quiz.bookmarks[q.origIndex]) delete quiz.bookmarks[q.origIndex];
+    else quiz.bookmarks[q.origIndex] = true;
+    saveState();
+    updateBmCount();
+    render();
+    renderBmPanel();
+  }
+  function updateBmCount() {
+    var n = Object.keys(quiz.bookmarks).length;
+    $("bmCount").textContent = n;
+    $("reviewToggle").classList.toggle("hidden", n === 0 && !quiz.reviewMode);
+  }
+  function renderBmPanel() {
+    var body = $("bmBody");
+    var ids = Object.keys(quiz.bookmarks);
+    if (!ids.length) {
+      body.innerHTML = '<div class="empty">No bookmarks yet.<br>Tap the ☆ on any question to flag it.</div>';
+      return;
+    }
+    body.innerHTML = "";
+    // show in original quiz order
+    quiz.questions.forEach(function (q) {
+      if (!quiz.bookmarks[q.origIndex]) return;
+      var item = document.createElement("div");
+      item.className = "bm-item";
+      var qn = document.createElement("div");
+      qn.className = "qn";
+      var a = quiz.answers[q.origIndex];
+      qn.textContent = "★ " + (a ? (a.correct ? "Answered · correct" : "Answered · wrong") : "Not answered");
+      var qp = document.createElement("div");
+      qp.className = "qp";
+      qp.textContent = q.q;
+      item.appendChild(qn); item.appendChild(qp);
+      item.addEventListener("click", function () {
+        // jump to this question within the active order
+        var idx = activeOrder().indexOf(q.origIndex);
+        if (idx === -1) {
+          // not in current (review) order; leave review mode first
+          exitReview();
+          idx = activeOrder().indexOf(q.origIndex);
+        }
+        quiz.pos = idx >= 0 ? idx : 0;
+        closeBmPanel();
+        render();
+      });
+      body.appendChild(item);
+    });
+  }
+  function openBmPanel() { renderBmPanel(); $("overlay").classList.add("show"); $("bmPanel").classList.add("show"); }
+  function closeBmPanel() { $("overlay").classList.remove("show"); $("bmPanel").classList.remove("show"); }
+
+  // ---------- Review-only mode ----------
+  function enterReview() {
+    var ids = Object.keys(quiz.bookmarks).map(Number);
+    if (!ids.length) return;
+    fullOrder = quiz.order.slice();
+    // preserve shuffled order but keep only bookmarked
+    quiz.order = quiz.order.filter(function (qi) { return quiz.bookmarks[quiz.questions[qi].origIndex]; });
+    quiz.reviewMode = true;
+    quiz.pos = 0;
+    $("reviewToggle").textContent = "Exit review";
+    render();
+  }
+  function exitReview() {
+    if (!quiz.reviewMode) return;
+    quiz.order = fullOrder.length ? fullOrder : quiz.order;
+    quiz.reviewMode = false;
+    quiz.pos = 0;
+    $("reviewToggle").textContent = "Review bookmarked";
+    render();
+  }
+  function toggleReview() { quiz.reviewMode ? exitReview() : enterReview(); }
+
+  // ---------- Finish / score ----------
+  function finish() {
+    var total = quiz.questions.length;
+    var correct = 0, answered = 0;
+    quiz.questions.forEach(function (q) {
+      var a = quiz.answers[q.origIndex];
+      if (a) { answered++; if (a.correct) correct++; }
+    });
+    var pct = total ? Math.round(correct / total * 100) : 0;
+    $("scoreBig").textContent = correct + " / " + total;
+    $("scorePct").textContent = pct + "% correct";
+    $("scoreSub").textContent = answered < total
+      ? (total - answered) + " question" + (total - answered === 1 ? "" : "s") + " left unanswered."
+      : "All questions answered.";
+    $("resultBack").classList.add("show");
+  }
+  function closeResult() { $("resultBack").classList.remove("show"); }
+
+  function restart() {
+    // reshuffle, wipe answers (keep bookmarks)
+    quiz.answers = {};
+    saveState();
+    quiz.order = shuffle(quiz.questions.map(function (_, i) { return i; }));
+    quiz.questions.forEach(function (q) { shuffle(q.options); });
+    quiz.reviewMode = false; fullOrder = [];
+    quiz.pos = 0;
+    $("reviewToggle").textContent = "Review bookmarked";
+    closeResult();
+    render();
+  }
+
+  function newCSV() {
+    closeResult();
+    quizScreen.classList.add("hidden");
+    uploadScreen.classList.remove("hidden");
+    ["bookmarksBtn","restartBtn","quizName"].forEach(function (id) { $(id).classList.add("hidden"); });
+    fileInput.value = "";
+  }
+
+  // ---------- Sample ----------
+  var SAMPLE = 'question,option_a,option_b,option_c,option_d,correct,explanation,topic\n' +
+    '"What is 2 + 2?","3","4","5","22","B","2 plus 2 equals 4.","Math"\n' +
+    '"What is the capital of Canada?","Toronto","Ottawa","Vancouver","Montreal","B","Ottawa, in Ontario, is Canada\'s capital.","Geography"\n' +
+    '"Which planet is known as the Red Planet?","Venus","Jupiter","Mars","Saturn","C","Mars looks red due to iron oxide on its surface.","Science"\n' +
+    '"Who wrote Romeo and Juliet?","Charles Dickens","William Shakespeare","Jane Austen","Mark Twain","B","Shakespeare wrote it in the 1590s.","Literature"\n' +
+    '"What is the largest ocean on Earth?","Atlantic","Indian","Arctic","Pacific","D","The Pacific is the largest and deepest ocean.","Geography"\n' +
+    '"HTTP status 404 means what?","OK","Server error","Not found","Redirect","C","404 indicates the requested resource was not found.","Tech"\n' +
+    '"What gas do plants primarily absorb?","Oxygen","Nitrogen","Carbon dioxide","Hydrogen","C","Plants absorb CO2 for photosynthesis.","Science"\n' +
+    '"True or false: the sun is a star.","True","False","","","A","The sun is a G-type main-sequence star.","Science"';
+
+  // ---------- Events ----------
+  dropzone.addEventListener("click", function () { fileInput.click(); });
+  fileInput.addEventListener("change", function () { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+  ["dragenter","dragover"].forEach(function (ev) {
+    dropzone.addEventListener(ev, function (e) { e.preventDefault(); dropzone.classList.add("drag"); });
+  });
+  ["dragleave","drop"].forEach(function (ev) {
+    dropzone.addEventListener(ev, function (e) { e.preventDefault(); dropzone.classList.remove("drag"); });
+  });
+  dropzone.addEventListener("drop", function (e) {
+    var f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+  $("sampleBtn").addEventListener("click", function () {
+    $("uploadErr").textContent = "";
+    try { parseCSVText(SAMPLE, "Sample Quiz"); startQuiz(); }
+    catch (err) { $("uploadErr").textContent = err.message; }
+  });
+
+  $("nextBtn").addEventListener("click", next);
+  $("prevBtn").addEventListener("click", prev);
+  $("finishBtn").addEventListener("click", finish);
+  $("starBtn").addEventListener("click", toggleBookmark);
+  $("reviewToggle").addEventListener("click", toggleReview);
+  $("bookmarksBtn").addEventListener("click", openBmPanel);
+  $("bmClose").addEventListener("click", closeBmPanel);
+  $("overlay").addEventListener("click", closeBmPanel);
+  $("restartBtn").addEventListener("click", newCSV);
+  $("retryBtn").addEventListener("click", restart);
+  $("newCsvBtn").addEventListener("click", newCSV);
+  $("reviewBmBtn").addEventListener("click", function () { closeResult(); enterReview(); });
+
+  // keyboard shortcuts
+  document.addEventListener("keydown", function (e) {
+    if (quizScreen.classList.contains("hidden")) return;
+    if ($("resultBack").classList.contains("show")) return;
+    if (e.key === "ArrowRight") next();
+    else if (e.key === "ArrowLeft") prev();
+    else if (e.key.toLowerCase() === "b") toggleBookmark();
+    else if (/^[1-6]$/.test(e.key)) {
+      var q = currentQ();
+      var i = parseInt(e.key, 10) - 1;
+      if (!quiz.answers[q.origIndex] && q.options[i]) answer(q, q.options[i]);
+    }
+  });
+})();
+</script>
+</body>
+</html>
