@@ -35,5 +35,6 @@ question,option_a,option_b,option_c,option_d,correct,explanation,topic,section
 - Prev / Next plus a jump grid that shows answered (green/red) and bookmarked (★) questions.
 - Bookmark any question (★ button or press `b`); a dedicated bookmarks panel plus a "Review bookmarked" mode.
 - Progress and bookmarks auto-save in your browser (per quiz, per device).
+- **Save / Load progress file**: export your answers + bookmarks to a small `.json` file and import it on another device. To resume elsewhere, load the same CSV first, then click **Load** and pick your saved file.
 - Score summary at the end; restart reshuffles.
 - Keyboard: ← / → to navigate, `1`–`6` to pick an answer, `b` to bookmark.

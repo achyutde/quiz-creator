@@ -219,7 +219,10 @@
   <span class="spacer"></span>
   <span id="quizName" class="pill hidden"></span>
   <button id="bookmarksBtn" class="btn icon hidden" title="Bookmarks">&#9733; <span id="bmCount">0</span></button>
+  <button id="saveBtn" class="btn ghost hidden" title="Save progress to a file">Save</button>
+  <button id="loadBtn" class="btn ghost hidden" title="Load progress from a file">Load</button>
   <button id="restartBtn" class="btn ghost hidden" title="New CSV">New CSV</button>
+  <input id="progressInput" type="file" accept="application/json,.json" hidden>
 </header>
 
 <main>
@@ -236,6 +239,9 @@
       <div class="row">
         <button id="sampleBtn" class="btn">Try the sample quiz</button>
         <span class="pill">Nothing is uploaded to a server &mdash; everything runs in your browser.</span>
+      </div>
+      <div class="row">
+        <span class="pill">Resuming on another device? Load the same CSV, then use <strong>Load</strong> to import your saved progress file.</span>
       </div>
       <div id="uploadErr" class="err"></div>
 
@@ -527,6 +533,8 @@
     uploadScreen.classList.add("hidden");
     quizScreen.classList.remove("hidden");
     $("bookmarksBtn").classList.remove("hidden");
+    $("saveBtn").classList.remove("hidden");
+    $("loadBtn").classList.remove("hidden");
     $("restartBtn").classList.remove("hidden");
     $("quizName").classList.remove("hidden");
     $("quizName").textContent = quiz.name;
@@ -807,8 +815,51 @@
     closeResult();
     quizScreen.classList.add("hidden");
     uploadScreen.classList.remove("hidden");
-    ["bookmarksBtn","restartBtn","quizName"].forEach(function (id) { $(id).classList.add("hidden"); });
+    ["bookmarksBtn","saveBtn","loadBtn","restartBtn","quizName"].forEach(function (id) { $(id).classList.add("hidden"); });
     fileInput.value = "";
+  }
+
+  // ---------- Portable progress save file ----------
+  function exportProgress() {
+    var data = {
+      app: "quiz-creator", version: 1,
+      quizId: quiz.id, name: quiz.name,
+      savedAt: new Date().toISOString(),
+      answers: quiz.answers, bookmarks: quiz.bookmarks
+    };
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    var safe = (quiz.name || "quiz").replace(/[^\w.-]+/g, "_");
+    a.href = url; a.download = safe + "-progress.json";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function importProgress(file) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var data;
+      try { data = JSON.parse(e.target.result); }
+      catch (err) { alert("That doesn't look like a valid progress file."); return; }
+      if (!data || (typeof data.answers !== "object" && typeof data.bookmarks !== "object")) {
+        alert("That doesn't look like a Quiz Creator progress file."); return;
+      }
+      if (data.quizId && quiz.id && data.quizId !== quiz.id) {
+        var ok = confirm('This save was made from a different quiz ("' + (data.name || "unknown") +
+          '"). It may not line up with the questions currently loaded. Load it anyway?');
+        if (!ok) return;
+      }
+      quiz.answers = data.answers || {};
+      quiz.bookmarks = data.bookmarks || {};
+      saveState();
+      updateBmCount();
+      quiz.pos = 0;
+      render();
+      alert("Progress loaded — " + Object.keys(quiz.answers).length + " answered, " +
+        Object.keys(quiz.bookmarks).length + " bookmarked.");
+    };
+    reader.readAsText(file);
   }
 
   // ---------- Sample ----------
@@ -850,6 +901,11 @@
   $("bookmarksBtn").addEventListener("click", openBmPanel);
   $("bmClose").addEventListener("click", closeBmPanel);
   $("overlay").addEventListener("click", closeBmPanel);
+  $("saveBtn").addEventListener("click", exportProgress);
+  $("loadBtn").addEventListener("click", function () { $("progressInput").click(); });
+  $("progressInput").addEventListener("change", function () {
+    if (this.files[0]) { importProgress(this.files[0]); this.value = ""; }
+  });
   $("restartBtn").addEventListener("click", newCSV);
   $("retryBtn").addEventListener("click", restart);
   $("newCsvBtn").addEventListener("click", newCSV);
