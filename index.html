@@ -527,6 +527,11 @@
     quiz.hasSections = quiz.sections.length > 0;
     quiz.sectionFilter = null;
 
+    // Start clean for this CSV, then restore only this quiz's saved state (if any).
+    // Without this reset, a new CSV would inherit the previous quiz's answers,
+    // since answers are keyed by question position.
+    quiz.answers = {};
+    quiz.bookmarks = {};
     loadState(); // restore prior answers/bookmarks for this exact quiz
 
     // Keep questions in CSV order; shuffle each question's options
