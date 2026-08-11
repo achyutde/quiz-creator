@@ -32,7 +32,9 @@ question,option_a,option_b,option_c,option_d,correct,explanation,topic,section
 - Questions stay in CSV order; answer options are shuffled each run.
 - Optional sections: add a `section` column to group questions, with a filter to practice one section or all.
 - Immediate feedback with the explanation after every answer.
-- Prev / Next plus a jump grid that shows answered (green/red) and bookmarked (★) questions.
+- Collapsible sidebar holds the question list (jump grid) showing answered (green/red) and bookmarked (★) questions; toggle it with the ☰ Questions button. On mobile it opens as a drawer.
+- Live score in the top bar: correct / answered with a running percentage.
+- Prev / Next navigation.
 - Bookmark any question (★ button or press `b`); a dedicated bookmarks panel plus a "Review bookmarked" mode.
 - Progress and bookmarks auto-save in your browser (per quiz, per device).
 - **Save / Load progress file**: export your answers + bookmarks to a small `.json` file and import it on another device. To resume elsewhere, load the same CSV first, then click **Load** and pick your saved file.
