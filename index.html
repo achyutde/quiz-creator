@@ -47,6 +47,7 @@
     display: grid; place-items: center; font-weight: 800; color: #fff; font-size: 15px;
   }
   header .spacer { flex: 1; }
+  .ver { font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 99px; padding: 2px 8px; align-self: center; }
   .btn {
     appearance: none; border: 1px solid var(--border);
     background: var(--panel-2); color: var(--text);
@@ -252,11 +253,13 @@
 <header>
   <div class="logo">Q</div>
   <h1>Quiz Creator</h1>
+  <span id="appVersion" class="ver" title="App version"></span>
   <span class="spacer"></span>
   <span id="quizName" class="pill hidden"></span>
   <button id="bookmarksBtn" class="btn icon hidden" title="Bookmarks">&#9733; <span id="bmCount">0</span></button>
   <button id="saveBtn" class="btn ghost hidden" title="Save progress to a file">Save</button>
   <button id="loadBtn" class="btn ghost hidden" title="Load progress from a file">Load</button>
+  <button id="resetBtn" class="btn ghost hidden" title="Clear all answers for this quiz">Reset</button>
   <button id="restartBtn" class="btn ghost hidden" title="New CSV">New CSV</button>
   <input id="progressInput" type="file" accept="application/json,.json" hidden>
 </header>
@@ -372,6 +375,8 @@
 <script>
 (function () {
   "use strict";
+
+  var APP_VERSION = "1.6.0";
 
   // ---------- State ----------
   var quiz = {
@@ -589,6 +594,7 @@
     $("bookmarksBtn").classList.remove("hidden");
     $("saveBtn").classList.remove("hidden");
     $("loadBtn").classList.remove("hidden");
+    $("resetBtn").classList.remove("hidden");
     $("restartBtn").classList.remove("hidden");
     $("quizName").classList.remove("hidden");
     $("quizName").textContent = quiz.name;
@@ -898,11 +904,24 @@
     render();
   }
 
+  function resetAll() {
+    if (!confirm("Reset all answers for this quiz? Your bookmarks will be kept.")) return;
+    quiz.answers = {};
+    saveState();
+    quiz.questions.forEach(function (q) { shuffle(q.options); });
+    quiz.sectionFilter = null;
+    quiz.reviewMode = false;
+    if ($("sectionFilter")) $("sectionFilter").value = "";
+    $("reviewToggle").textContent = "Review bookmarked";
+    quiz.pos = 0;
+    render();
+  }
+
   function newCSV() {
     closeResult();
     quizScreen.classList.add("hidden");
     uploadScreen.classList.remove("hidden");
-    ["bookmarksBtn","saveBtn","loadBtn","restartBtn","quizName"].forEach(function (id) { $(id).classList.add("hidden"); });
+    ["bookmarksBtn","saveBtn","loadBtn","resetBtn","restartBtn","quizName"].forEach(function (id) { $(id).classList.add("hidden"); });
     fileInput.value = "";
   }
 
@@ -995,6 +1014,7 @@
   $("bmClose").addEventListener("click", closeBmPanel);
   $("overlay").addEventListener("click", closeBmPanel);
   $("saveBtn").addEventListener("click", exportProgress);
+  $("resetBtn").addEventListener("click", resetAll);
   $("loadBtn").addEventListener("click", function () { $("progressInput").click(); });
   $("progressInput").addEventListener("change", function () {
     if (this.files[0]) { importProgress(this.files[0]); this.value = ""; }
@@ -1017,6 +1037,9 @@
       if (!quiz.answers[q.origIndex] && q.options[i]) answer(q, q.options[i]);
     }
   });
+
+  // Show app version
+  $("appVersion").textContent = "v" + APP_VERSION;
 })();
 </script>
 </body>

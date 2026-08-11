@@ -39,4 +39,6 @@ question,option_a,option_b,option_c,option_d,correct,explanation,topic,section
 - Progress and bookmarks auto-save in your browser (per quiz, per device).
 - **Save / Load progress file**: export your answers + bookmarks to a small `.json` file and import it on another device. To resume elsewhere, load the same CSV first, then click **Load** and pick your saved file.
 - Score summary at the end; restart reshuffles.
+- **Reset** button clears all answers for the current quiz (bookmarks are kept) so you can retake it.
+- App version is shown next to the title in the header.
 - Keyboard: ← / → to navigate, `1`–`6` to pick an answer, `b` to bookmark.
