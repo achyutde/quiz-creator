@@ -35,10 +35,13 @@ question,option_a,option_b,option_c,option_d,correct,explanation,topic,section
 - Collapsible sidebar holds the question list (jump grid) showing answered (green/red) and bookmarked (★) questions; toggle it with the ☰ Questions button. On mobile it opens as a drawer.
 - Live score in the top bar: correct / answered with a running percentage.
 - Prev / Next navigation.
+- Select-then-submit: click an option to select it (click again to deselect or pick another), then press **Submit answer** (or Enter) to lock it in — so you can change your mind before committing.
+- Collapsible **Scratchpad**: a canvas for working out calculations with an Apple Pencil, stylus, mouse, or finger (pen + eraser + clear). It's ephemeral — nothing is saved.
+- **Themes + background color**: pick a theme (Midnight, Slate, Ocean, Forest, Light) or set a custom background color. Your choice is remembered per device.
 - Bookmark any question (★ button or press `b`); a dedicated bookmarks panel plus a "Review bookmarked" mode.
 - Progress and bookmarks auto-save in your browser (per quiz, per device).
 - **Save / Load progress file**: export your answers + bookmarks to a small `.json` file and import it on another device. To resume elsewhere, load the same CSV first, then click **Load** and pick your saved file.
 - Score summary at the end; restart reshuffles.
 - **Reset** button clears all answers for the current quiz (bookmarks are kept) so you can retake it.
 - App version is shown next to the title in the header.
-- Keyboard: ← / → to navigate, `1`–`6` to pick an answer, `b` to bookmark.
+- Keyboard: ← / → to navigate, `1`–`6` to select an answer, Enter to submit, `b` to bookmark.
