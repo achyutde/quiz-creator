@@ -68,6 +68,8 @@
     transform: translateY(100%); transition: transform .24s ease;
   }
   .scratch-panel.open { transform: translateY(0); }
+  .scratch-panel.min { height: auto; }
+  .scratch-panel.min #scratchCanvas { display: none; }
   .scratch-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
   .scratch-title { font-weight: 700; font-size: 14px; }
   .scratch-hint { font-size: 11px; color: var(--muted); }
@@ -394,6 +396,7 @@
     <button id="penBtn" class="btn ghost active" title="Pen">Pen</button>
     <button id="eraserBtn" class="btn ghost" title="Eraser">Eraser</button>
     <button id="scratchClear" class="btn ghost" title="Clear the scratchpad">Clear</button>
+    <button id="scratchMin" class="btn ghost" title="Minimize / expand">Minimize</button>
     <button id="scratchClose" class="btn ghost" title="Close">Close</button>
   </div>
   <canvas id="scratchCanvas"></canvas>
@@ -429,7 +432,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.7.0";
+  var APP_VERSION = "1.7.1";
 
   // ---------- State ----------
   var quiz = {
@@ -828,6 +831,16 @@
     $("penBtn").classList.toggle("active", !erase);
     $("eraserBtn").classList.toggle("active", erase);
   }
+  // Grow the page by the panel's height while it's open, so content above
+  // the fixed panel can be scrolled into the visible strip (matters on short screens).
+  function adjustMainForScratch() {
+    var main = document.querySelector("main");
+    var p = $("scratchPanel");
+    if (main) {
+      main.style.paddingBottom = p.classList.contains("open")
+        ? (p.getBoundingClientRect().height + 28) + "px" : "";
+    }
+  }
   function toggleScratch() {
     var p = $("scratchPanel");
     var open = p.classList.toggle("open");
@@ -845,8 +858,16 @@
         }
       }
       // size after the panel has transitioned into view
-      setTimeout(sizeScratch, 60);
+      setTimeout(function () { sizeScratch(); adjustMainForScratch(); }, 60);
     }
+    adjustMainForScratch();
+  }
+  function toggleScratchMin() {
+    var p = $("scratchPanel");
+    var min = p.classList.toggle("min");
+    $("scratchMin").textContent = min ? "Expand" : "Minimize";
+    if (!min) setTimeout(sizeScratch, 60);
+    adjustMainForScratch();
   }
 
   // ---------- Theme + background color ----------
@@ -1121,6 +1142,7 @@
     ["bookmarksBtn","saveBtn","loadBtn","resetBtn","scratchToggle","restartBtn","quizName"].forEach(function (id) { $(id).classList.add("hidden"); });
     $("scratchPanel").classList.remove("open");
     $("scratchToggle").classList.remove("active");
+    adjustMainForScratch();
     fileInput.value = "";
   }
 
@@ -1211,13 +1233,14 @@
   $("scratchToggle").addEventListener("click", toggleScratch);
   $("scratchClose").addEventListener("click", toggleScratch);
   $("scratchClear").addEventListener("click", clearScratch);
+  $("scratchMin").addEventListener("click", toggleScratchMin);
   $("penBtn").addEventListener("click", function () { setScratchTool(false); });
   $("eraserBtn").addEventListener("click", function () { setScratchTool(true); });
   $("themeSelect").addEventListener("change", function () { applyTheme(this.value); });
   $("bgColor").addEventListener("input", function () { applyCustomBg(this.value); });
   window.addEventListener("resize", function () {
     setNav($("quizLayout").classList.contains("nav-open"));
-    if ($("scratchPanel").classList.contains("open")) sizeScratch();
+    if ($("scratchPanel").classList.contains("open")) { sizeScratch(); adjustMainForScratch(); }
   });
   $("bookmarksBtn").addEventListener("click", openBmPanel);
   $("bmClose").addEventListener("click", closeBmPanel);

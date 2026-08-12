@@ -36,7 +36,7 @@ question,option_a,option_b,option_c,option_d,correct,explanation,topic,section
 - Live score in the top bar: correct / answered with a running percentage.
 - Prev / Next navigation.
 - Select-then-submit: click an option to select it (click again to deselect or pick another), then press **Submit answer** (or Enter) to lock it in — so you can change your mind before committing.
-- Collapsible **Scratchpad**: a canvas for working out calculations with an Apple Pencil, stylus, mouse, or finger (pen + eraser + clear). It's ephemeral — nothing is saved.
+- Collapsible **Scratchpad**: a canvas for working out calculations with an Apple Pencil, stylus, mouse, or finger (pen + eraser + clear). It's ephemeral — nothing is saved. Minimize it to a thin bar, and while it's open the page grows so you can scroll every option into the space above it on short screens.
 - **Themes + background color**: pick a theme (Midnight, Slate, Ocean, Forest, Light) or set a custom background color. Your choice is remembered per device.
 - Bookmark any question (★ button or press `b`); a dedicated bookmarks panel plus a "Review bookmarked" mode.
 - Progress and bookmarks auto-save in your browser (per quiz, per device).
