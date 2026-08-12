@@ -68,8 +68,7 @@
     transform: translateY(100%); transition: transform .24s ease;
   }
   .scratch-panel.open { transform: translateY(0); }
-  .scratch-panel.min { height: auto; }
-  .scratch-panel.min #scratchCanvas { display: none; }
+  .scratch-panel.min { height: min(22vh, 200px); }
   .scratch-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
   .scratch-title { font-weight: 700; font-size: 14px; }
   .scratch-hint { font-size: 11px; color: var(--muted); }
@@ -432,7 +431,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.7.1";
+  var APP_VERSION = "1.7.2";
 
   // ---------- State ----------
   var quiz = {
@@ -786,11 +785,32 @@
     if (!c || !sctx) return;
     var rect = c.getBoundingClientRect();
     var dpr = window.devicePixelRatio || 1;
-    c.width = Math.max(1, Math.floor(rect.width * dpr));
-    c.height = Math.max(1, Math.floor(rect.height * dpr));
+    var newW = Math.max(1, Math.floor(rect.width * dpr));
+    var newH = Math.max(1, Math.floor(rect.height * dpr));
+    if (newW === c.width && newH === c.height) return; // unchanged: keep drawing as-is
+
+    // Snapshot the current drawing so a resize doesn't wipe it.
+    var snap = null;
+    if (c.width > 0 && c.height > 0) {
+      try {
+        snap = document.createElement("canvas");
+        snap.width = c.width; snap.height = c.height;
+        snap.getContext("2d").drawImage(c, 0, 0);
+      } catch (e) { snap = null; }
+    }
+
+    c.width = newW; c.height = newH;
     sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     sctx.lineCap = "round";
     sctx.lineJoin = "round";
+
+    // Restore the drawing at device-pixel scale, anchored top-left (no distortion).
+    if (snap) {
+      sctx.save();
+      sctx.setTransform(1, 0, 0, 1, 0, 0);
+      sctx.drawImage(snap, 0, 0);
+      sctx.restore();
+    }
   }
   function scPos(e) {
     var c = $("scratchCanvas");
@@ -866,7 +886,8 @@
     var p = $("scratchPanel");
     var min = p.classList.toggle("min");
     $("scratchMin").textContent = min ? "Expand" : "Minimize";
-    if (!min) setTimeout(sizeScratch, 60);
+    // Resize the canvas to the new height (drawing is preserved by sizeScratch).
+    setTimeout(function () { sizeScratch(); adjustMainForScratch(); }, 60);
     adjustMainForScratch();
   }
 
