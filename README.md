@@ -36,7 +36,7 @@ question,option_a,option_b,option_c,option_d,correct,explanation,topic,section
 - Live score in the top bar: correct / answered with a running percentage.
 - Prev / Next navigation.
 - Select-then-submit: click an option to select it (click again to deselect or pick another), then press **Submit answer** (or Enter) to lock it in — so you can change your mind before committing.
-- Collapsible **Tools panel** on the right (mirrors the Questions panel on the left) — toggle it with the **Tools ⚙** button. It docks and reflows the quiz on desktop, and opens as a drawer on phones. It holds:
+- Collapsible **Tools panel** on the right (mirrors the Questions panel on the left) — toggle it with the **Tools ⚙** button. It docks and reflows the quiz on desktop, and opens as a drawer on phones. Opening either side panel closes the other so they never fill the screen, and on desktop you can drag the Tools panel's left edge to resize it (remembered per device). It holds:
   - **Appearance**: pick a theme (Midnight, Slate, Ocean, Forest, Light) or a custom background color. Remembered per device.
   - **Calculator**: digits, + − × ÷, parentheses, clear, backspace, equals.
   - **Scratchpad**: a canvas for working out calculations with an Apple Pencil, stylus, mouse, or finger (pen + eraser + clear). Ephemeral — nothing is saved.
